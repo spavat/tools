@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Deezer: Copy artists
+// @name         Deezer: Copy artists in clipboard
 // @namespace    http://tampermonkey.net/
 // @version      2024-08-16
 // @description  Add a button to copy the artists or featured artist
