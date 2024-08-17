@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Deezer: Copy artists in clipboard
+// @name         Deezer: Copy artists
 // @namespace    http://tampermonkey.net/
 // @version      2024-08-16
 // @description  Add a button to copy the artists or featured artist
@@ -68,14 +68,14 @@
 
         // if no artists in the header, nothing to do
         const headerRow = document.querySelector(HEADER_TABLE_SELECTOR);
-        if (!headerRow?.innerText?.includes("ARTISTES INVITÉ·ES") && !headerRow?.innerText?.includes("ARTISTE")) {
+        if (!headerRow?.textContent?.includes("ARTISTES INVITÉ·ES") && !headerRow?.textContent?.includes("ARTISTE")) {
             console.log("no featured artists/artists, stopping...");
             return;
         }
 
         const artistCells = document.querySelectorAll(ARTISTS_CELLS_SELECTOR);
         artistCells.forEach((cell) => {
-            const content = cell.innerText.replaceAll(/, /g, "; ");
+            const content = cell.textContent.replaceAll(/, /g, "; ");
             // empty or already updated cell
             if (content === "-" || content.startsWith(ADDED_BUTTON_CHAR)) {
                 return;
