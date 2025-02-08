@@ -85,7 +85,7 @@
             const button = document.createElement("button");
             button.appendChild(buttonText);
             button.addEventListener("click", (event) => {
-                console.log("copy:", content, event);
+                console.log("copy:", content);
                 event.target.parentNode.style.backgroundColor = "grey";
                 writeClipboardText(content);
             });
