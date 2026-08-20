@@ -1,0 +1,205 @@
+// ==UserScript==
+// @name         Navidrome UI: Get Album info
+// @namespace    http://tampermonkey.net/
+// @version      2026-08-20
+// @description  Copy the album data
+// @author       spavat
+// @match        http://localhost:4533/app/
+// @icon         www.google.com/s2/favicons?sz=64&domain=navidrome.org
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    function getAncestor(element, levels) {
+        let ancestor = element;
+        for (let i = 0; i < levels; i++) {
+            if (!ancestor) break; // Sécurité si le parent n'existe pas
+            ancestor = ancestor.parentElement;
+        }
+        return ancestor;
+    }
+
+    const frenchMonths = {
+        "janv.": "01",
+        "févr.": "02",
+        "mars": "03",
+        "avr.": "04",
+        "mai": "05",
+        "juin": "06",
+        "juil.": "07",
+        "août": "08",
+        "sept.": "09",
+        "oct.": "10",
+        "nov.": "11",
+        "déc.": "12"
+    };
+    const englishMonths = {
+        "Jan": "01",
+        "Feb": "02",
+        "Mar": "03",
+        "Apr": "04",
+        "May": "05",
+        "Jun": "06",
+        "Jul": "07",
+        "Aug": "08",
+        "Sept": "09",
+        "Oct": "10",
+        "Nov": "11",
+        "Dec": "12"
+    };
+    function getMonth(monthStr) {
+        const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+        if (locale === "fr-FR") {
+            return frenchMonths[monthStr];
+        }
+        return englishMonths[monthStr];
+    }
+
+    function formatDate(dateStr) {
+        // Only year
+        if (dateStr.length === 4) {
+            return dateStr;
+        }
+        const [day, month, year] = dateStr.split(" ");
+        return `${year}-${getMonth(month)}-${day.padStart(2, "0")}`;
+    }
+
+    function convertDurationInMinutes(duration) {
+        // Format: mm:ss or hh:mm:ss
+        if (!duration) {
+            return 0;
+        }
+
+        const parts = duration.split(":")
+
+        // Rounding second?
+        const secondsString = parts.pop() ?? "0";
+        const seconds = parseInt(secondsString, 10);
+
+        // Minutes
+        const minutesString = parts.pop() ?? "0";
+        const minutes = parseInt(minutesString, 10);
+
+        // Hours
+        const hoursString = parts.pop() ?? "0";
+        const hours = parseInt(hoursString, 10);
+
+        return minutes + (hours * 60) + (seconds >= 30 ? 1 : 0);
+
+    }
+
+    function addCopyButton(targetElement) {
+        // Évite les doublons
+        if (document.querySelector("#my-copy-btn")) return;
+
+        const button = document.createElement("button");
+        button.id = "my-copy-btn";
+        button.textContent = "📋 Copier";
+
+        button.style.cssText = `
+            margin-left: 8px;
+            padding: 4px 8px;
+            cursor: pointer;
+            background-color: #d51007;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+        `;
+
+        button.addEventListener("click", () => {
+            let artist = "";
+            let album = "";
+            let releaseDate = "";
+            let duration = "";
+            let genre = "";
+
+            const h5 = document.querySelector("#main-content h5");
+            if (h5) {
+                album = h5.textContent.trim();
+                const nextSibling = h5.nextElementSibling.nextElementSibling;
+                if (nextSibling) {
+                    artist = nextSibling.textContent.trim();
+                    const otherDetails = nextSibling.nextElementSibling.children;
+                    // first one is the date
+                    let rawDate = otherDetails[0].textContent.trim();
+                    if (rawDate.startsWith("Released ")) {
+                        rawDate = rawDate.substring(9).trim();
+                    }
+                    releaseDate = formatDate(rawDate);
+
+                    // second to last is duration (in sec)
+                    const rawDuration = otherDetails[otherDetails.length - 2].textContent.trim();
+                    duration = convertDurationInMinutes(rawDuration);
+                }
+                // First chip should be genre
+                const chip = getAncestor(h5, 3).querySelector(".MuiChip-label");
+                console.log("chip", chip)
+                if (chip) {
+                    genre = chip.textContent.trim();
+                }
+            }
+
+
+
+            let dataToCopy = `
+{
+		"listeningDate": "${new Date().toISOString().split("T")[0]}",
+		"artist": "${artist.replaceAll('"', '\\"')}",
+		"album": "${album.replaceAll('"', '\\"')}",
+		"releaseDate": "${releaseDate}",
+		"genre": "${genre.replaceAll('"', '\\"')}",
+		"duration": ${duration}
+}
+`;
+
+            navigator.clipboard.writeText(dataToCopy)
+                .then(() => {
+                    button.textContent = "✅ Copié !";
+                    setTimeout(() => { button.textContent = "📋 Copier" }, 2000);
+                })
+                .catch(err => {
+                    console.error("Erreur clipboard :", err);
+                    button.textContent = "❌ Erreur";
+                });
+        });
+        const ancestor = getAncestor(targetElement, 3);
+        ancestor.insertAdjacentElement("afterend", button);
+    }
+
+    function onUrlChange(callback) {
+        let lastUrl = location.href;
+        new MutationObserver(() => {
+            if (location.href !== lastUrl) {
+                lastUrl = location.href;
+                callback();
+            }
+        }).observe(document.body, { childList: true, subtree: true });
+    }
+
+    // Lancement initial
+    waitForElement();
+
+    // Puis à chaque changement d'URL
+    onUrlChange(() => {
+        // Relance la recherche de l'élément cible
+        const existing = document.querySelector("#my-copy-btn");
+        if (existing) existing.remove();
+
+        waitForElement();
+    });
+
+    function waitForElement() {
+        const observer = new MutationObserver(() => {
+            const target = document.querySelector(".lastfm-icon");
+            if (target) {
+                observer.disconnect();
+                addCopyButton(target);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+})();
