@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Navidrome UI: Get Album info
 // @namespace    http://tampermonkey.net/
-// @version      2026-08-20
+// @version      2026-09-24
 // @description  Copy the album data
 // @author       spavat
 // @match        http://localhost:4533/app/
@@ -58,11 +58,15 @@
     }
 
     function formatDate(dateStr) {
+        let finalDate = dateStr.replaceAll("  ", " ");
         // Only year
-        if (dateStr.length === 4) {
+        if (finalDate.length === 4) {
             return dateStr;
         }
-        const [day, month, year] = dateStr.split(" ");
+        if (finalDate.startsWith("Sortie ")) {
+            finalDate = finalDate.slice(7);
+        }
+        const [day, month, year] = finalDate.split(" ");
         return `${year}-${getMonth(month)}-${day.padStart(2, "0")}`;
     }
 
