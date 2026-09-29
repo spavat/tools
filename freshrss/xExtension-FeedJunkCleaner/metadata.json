@@ -1,0 +1,8 @@
+{
+	"name": "Feed Junk Cleaner",
+	"author": "Claude Code",
+	"description": "Supprime le contenu parasite (ex. script Cloudflare) ajouté après la balise de fin d'un flux RSS/Atom.",
+	"version": "1.0",
+	"entrypoint": "FeedJunkCleaner",
+	"type": "system"
+}
